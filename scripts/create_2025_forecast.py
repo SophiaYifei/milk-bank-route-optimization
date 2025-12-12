@@ -37,6 +37,7 @@ SHEET_NAME = "Deposit Transactions"  # Try "Deposit_Transactions" if this fails
 DATE_COL = "Deposit Date"
 DEPOT_COL = "Depo"  # or "Depot_ID" depending on actual column name
 VOLUME_COL = "Volume (oz)"
+DEPOSIT_ID_COL = "Deposit ID"  # Deposit ID column
 
 # ============================================================================
 # Main Processing
@@ -69,15 +70,27 @@ def main():
     # 2. Clean and prepare data
     print(f"\n2. Cleaning data...")
     
-    # Select relevant columns
+    # Select relevant columns (include Deposit ID if available)
     required_cols = [DATE_COL, DEPOT_COL, VOLUME_COL]
+    optional_cols = [DEPOSIT_ID_COL]
+    
     missing_cols = [col for col in required_cols if col not in df.columns]
     if missing_cols:
         print(f"   ERROR: Missing columns: {missing_cols}")
         print(f"   Available columns: {list(df.columns)}")
         return
     
-    work = df[[DATE_COL, DEPOT_COL, VOLUME_COL]].copy()
+    # Check if Deposit ID column exists
+    has_deposit_id = DEPOSIT_ID_COL in df.columns
+    if has_deposit_id:
+        print(f"   ✓ Found Deposit ID column: {DEPOSIT_ID_COL}")
+        work_cols = [DEPOSIT_ID_COL, DATE_COL, DEPOT_COL, VOLUME_COL]
+    else:
+        print(f"   ⚠ Warning: Deposit ID column '{DEPOSIT_ID_COL}' not found")
+        print(f"   Available columns: {list(df.columns)}")
+        work_cols = [DATE_COL, DEPOT_COL, VOLUME_COL]
+    
+    work = df[work_cols].copy()
     
     # Drop rows with missing date or depot
     initial_rows = len(work)
@@ -163,15 +176,17 @@ def main():
     # 6. Prepare final output DataFrame
     print(f"\n6. Preparing output...")
     
-    # Select columns for output (keep original columns plus new ones)
-    output_cols = {
-        'Date_2025': forecast['Date_2025'],
-        DEPOT_COL: forecast[DEPOT_COL],
-        'Volume_2025': forecast['Volume_2025']
-    }
+    # Prepare output DataFrame with Deposit ID if available
+    # Order: Deposit ID (if exists), Date_2025, Depo, Volume_2025, then reference columns
+    output_dict = {}
     
-    # Optionally keep original date and volume for reference
-    output_df = pd.DataFrame({
+    # Add Deposit ID first if it exists
+    if DEPOSIT_ID_COL in forecast.columns:
+        output_dict[DEPOSIT_ID_COL] = forecast[DEPOSIT_ID_COL]
+        print(f"   ✓ Including Deposit ID column in output")
+    
+    # Add main columns
+    output_dict.update({
         'Date_2025': forecast['Date_2025'],
         DEPOT_COL: forecast[DEPOT_COL],
         'Volume_2025': forecast['Volume_2025'],
@@ -179,8 +194,13 @@ def main():
         'Volume_2024_Original': forecast[VOLUME_COL]  # Keep for reference
     })
     
-    # Sort by date and depot
-    output_df = output_df.sort_values(['Date_2025', DEPOT_COL]).reset_index(drop=True)
+    output_df = pd.DataFrame(output_dict)
+    
+    # Sort by date and depot (and Deposit ID if available)
+    sort_cols = ['Date_2025', DEPOT_COL]
+    if DEPOSIT_ID_COL in output_df.columns:
+        sort_cols.append(DEPOSIT_ID_COL)
+    output_df = output_df.sort_values(sort_cols).reset_index(drop=True)
     
     print(f"   Final forecast dataset: {len(output_df):,} rows")
     
