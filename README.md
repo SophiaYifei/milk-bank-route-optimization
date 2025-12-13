@@ -7,6 +7,7 @@ This project optimizes milk collection routes for a milk bank logistics system u
 The optimization model addresses the following challenge:
 
 - **Single driver** with maximum **12 hours (720 minutes)** working time per day
+- **Single driver** with a company policy maximum **12 hours (720 minutes)** working time per day, but daily route plans are built to a **660-minute (11-hour) operating cap** to leave buffer for traffic and unexpected delays
 - Multiple depots with varying daily milk volumes
 - Need to balance inventory levels, travel time, and operational costs
 - Determine which depots should use "Shipping" vs "Truck" collection based on distance/time constraints
@@ -17,7 +18,7 @@ The optimization model addresses the following challenge:
 - **Depot Classification**: Automatically classifies depots as "Shipping" or "Truck Candidate" based on:
   - Traffic safety buffer (max 660 minutes task time)
   - ROI efficiency (distance vs annual volume)
-- **Rolling Horizon Optimization**: Solves IRP using 20-day rolling horizon with safety triggers
+- **Rolling Horizon Optimization**: Solves IRP day-by-day over a 20-day run with safety triggers (inventory threshold and a maximum “days since last pickup” guardrail)
 - **Cost Minimization**: Optimizes driver wages and fuel costs
 
 ## Project Structure
@@ -92,8 +93,10 @@ Run `notebooks/02_Data_Prep.ipynb`:
 Run `notebooks/03_Optimization_Model.ipynb`:
 
 - Implements IRP model using Pyomo
-- Uses rolling horizon approach (20 days)
-- Safety trigger: Force visit if inventory > 850 oz
+- Runs day-by-day over 20 days (pilot horizon)
+- Safety triggers:
+  - Force visit if projected inventory would exceed **850 oz**
+  - Force visit if a depot has not been picked up in roughly **5 months (150 days)** (operational shelf-life guardrail)
 - Minimizes operational costs (wages + fuel)
 - Outputs: `final_inventory_log.csv`, `final_route_plan.csv`
 
@@ -160,7 +163,7 @@ Minimize total operational costs:
 
 - **Inventory Balance**: `I[i,t] = I[i,t-1] + q[i,t] - d[i,t]`
 - **Capacity Limits**: Max 1000 oz per depot
-- **Time Limits**: Max 660 minutes per day (11 hours + buffer)
+- **Time Limits**: Max 660 minutes per day (11 hours + buffer vs 12-hour policy limit)
 - **Flow Conservation**: Routes must start/end at hub
 - **Subtour Elimination**: MTZ formulation
 
