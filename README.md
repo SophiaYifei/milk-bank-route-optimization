@@ -2,6 +2,8 @@
 
 This project optimizes milk collection routes for a milk bank logistics system using an Inventory Routing Problem (IRP) optimization model. The system determines optimal daily routes for a single driver to collect milk from multiple depots while minimizing operational costs.
 
+This is a group project, where I'm responsible for all the code part.
+
 ## Project Overview
 
 The optimization model addresses the following challenge:
